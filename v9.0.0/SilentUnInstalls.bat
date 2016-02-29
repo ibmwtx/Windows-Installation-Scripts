@@ -1225,12 +1225,6 @@ call :DeleteTXFileExtensionsByBits 1
 goto :EOF
 
 
-rem ===============================================================================
-rem :DeleteTXFileExtensions: Delete the file extensions associated with WTX.
-rem Parameters:
-rem Arg1: If 0, handle normal (32bit) registry locations for file extensions.
-rem       If !0, handle 64bit registry locations.
-rem ===============================================================================
 
 :DeleteTXFileExtensionsByBits
 
@@ -1273,10 +1267,6 @@ call :RegDeleteKey
 set REG_DEL_KEYNAME=%DTXFEBB_HKCRKEY%\%FULL_PRODNAME%.mtt
 call :RegDeleteKey
 
-rem ========================================
-rem Don't delete DataPower extensions for
-rem older releases.
-rem ========================================
 
 if ("%MAJOR_VER%") equ ("8.1")  goto :DTXFEBB_AfterDPA
 if ("%MAJOR_VER%") equ ("8.0")  goto :DTXFEBB_AfterDPA
@@ -1291,17 +1281,6 @@ if defined TXINSTALLS_DEBUG pause
 goto :EOF
 
 
-rem ===============================================================================
-rem :DeleteTXMenuEntries: Delete the menus items associated with WTX.  We need to
-rem delete just the entries we know about so that any others will still be there.
-rem This is the case when we're not "cleaning" the entire directory in order to
-rem leave behind previously installed components, such as IP's or other packs.
-rem
-rem Notes:
-rem - SNMP  dropped from v8.3.0.1
-rem - TXSDK dropped from v8.3.0.0
-rem - MB    dropped from v8.2.0.2
-rem ===============================================================================
 
 :DeleteTXMenuEntries
 set DTXME_ORIG_REG_KEY=%REG_DEL_KEYNAME%
@@ -1362,23 +1341,6 @@ if defined TXINSTALLS_DEBUG pause
 goto :EOF
 
 
-rem ===============================================================================
-rem :RegQueryKey: Query the specified registry value or key.  Call using the
-rem following environment variables:
-rem
-rem REG_QUERY_KEYNAME:   Key being referenced.
-rem REG_QUERY_VALUENAME: Value below REG_QUERY_KEYNAME to query.  Possible values:
-rem - Not defined => Query all values under REG_QUERY_KEYNAME
-rem - @ => Query the value of empty value name <no name>
-rem - Any other value => The value name, under the selected Key, to query.
-rem
-rem Returns:
-rem REG_QUERY_VALUE: If REG_QUERY_VALUENAME is specified, this is set to the first
-rem                  line of data returned from the query.
-rem REG_QUERY_OUTFILE: All output returned from the query.  If the query failed,
-rem                    this file will be deleted before returning to the user.
-rem REG_QUERY_RETCODE: Return code from "reg query", or 1 if an error ocurred.
-rem ===============================================================================
 
 :RegQueryKey
 
@@ -1391,11 +1353,7 @@ call :Log %0: REG_QUERY_KEYNAME not defined (REG_QUERY_VALUENAME=%REG_QUERY_VALU
 goto :RQK_Done
 :RQK_AfterCheckKeyDefined
 
-rem ========================================
-rem Define the query.  If REG_QUERY_VALUENAME
-rem is "@", we need to find "<NO NAME>" in
-rem the output.
-rem ========================================
+
 
 set RQK_CMD=reg query "%REG_QUERY_KEYNAME%"
 if not defined REG_QUERY_VALUENAME goto :RQK_AfterAddValueToCmd
@@ -1413,18 +1371,7 @@ goto :RQK_AfterAddValueToCmd
 
 :RQK_AfterAddValueToCmd
 
-rem ========================================
-rem Run the query.  If REG_QUERY_VALUENAME
-rem was specified, set REG_QUERY_VALUE to
-rem the first line of output from the query.
-rem The idea is to provide the caller with
-rem the value they're looking for without
-rem them doing extra work.
-rem
-rem Note: 64Bit Windows has whitespace
-rem differences in the output from the query
-rem that needs to be dealt with.
-rem ========================================
+
 
 %RQK_CMD% > %REG_QUERY_OUTFILE% 2>&1
 set REG_QUERY_RETCODE=%ERRORLEVEL%
@@ -1458,10 +1405,8 @@ echo     %RQK_TMP_VALUE% > %TMPOUTFILE%
 for /f "tokens=1,2* delims=	 " %%e in (%TMPOUTFILE%) do set REG_QUERY_VALUE=%%g
 
 if ("%REG_QUERY_VALUENAME%") equ ("%RQK_TMP_QUERY_VALUENAME%") goto :RQK_AfterRemoveLastSpaceFromValue
-rem ========================================
-rem There's extra parsing required if
-rem REG_QUERY_VALUENAME contains whitespace.
-rem ========================================
+
+
 if ("%REG_QUERY_VALUE:~-1%") equ (" ") set REG_QUERY_VALUE=%REG_QUERY_VALUE:~0,-1%
 :RQK_AfterRemoveLastSpaceFromValue
 
@@ -1478,17 +1423,6 @@ if defined TXINSTALLS_DEBUG pause
 goto :EOF
 
 
-rem ===============================================================================
-rem :RegDeleteKey: Delete the specified registry value or key.  Call using the
-rem following environment variables:
-rem
-rem REG_DEL_KEYNAME:   Key being referenced.
-rem REG_DEL_VALUENAME: Value below REG_DEL_KEYNAME to delete.  Possible values:
-rem - Not defined => Delete all values under REG_DEL_KEYNAME
-rem - @ => Delete the value of empty value name <no name>
-rem - Any other value => The value name, under the selected Key, to delete.
-rem
-rem ===============================================================================
 
 :RegDeleteKey
 
@@ -1496,12 +1430,6 @@ if defined REG_DEL_KEYNAME goto :RDK_AfterCheckKeyDefined
 call :Log %0: REG_DEL_KEYNAME not defined.  Nothing done.
 goto :RDK_Done
 :RDK_AfterCheckKeyDefined
-
-rem ========================================
-rem For debugging purposes, check if the
-rem key exists.  This way, we will only say
-rem that we're delete it if we need to.
-rem ========================================
 
 set RDK_CMD=reg query "%REG_DEL_KEYNAME%"
 if defined REG_DEL_VALUENAME set RDK_CMD=%RDK_CMD% /v "%REG_DEL_VALUENAME%"
@@ -1528,10 +1456,7 @@ set RDK_CMD=
 goto :EOF
 
 
-rem ===============================================================================
-rem :IntServ_Initialize: Initialize the list of integration servers that may use,
-rem or may be using, this version of WTX.
-rem ===============================================================================
+
 
 :IntServ_Initialize
 
@@ -1547,10 +1472,6 @@ call :WMB_Initialize
 goto :EOF
 
 
-rem ===============================================================================
-rem :IntServ_DisplayStatus: Display the status of the integration server.
-rem Arg1: Server to display status of
-rem ===============================================================================
 
 :IntServ_DisplayStatus
 
@@ -1590,19 +1511,10 @@ call :Log Status of %IS_DS_SERVER% = %IS_DS_SERVER_STATUS% (%IS_DS_SERVER_STATUS
 goto :EOF
 
 
-rem ===============================================================================
-rem :IntServ_DisableIfRunning: Disable any integration servers that may potentially
-rem use, or may currently be using, this version of WTX.
-rem ===============================================================================
 
 :IntServ_DisableIfRunning
 
-rem ========================================
-rem If WMB is present, the profile will have
-rem already been defined and run.
-rem If WMB has not already been stopped,
-rem setup the command to stop it.
-rem ========================================
+
 
 if not defined WMB_PROFILE                           goto :IS_DIR_AfterWMB
 if /i (%INTSERV_STATUS_WMB%) equ (%STATUS_STOPPED%)  goto :IS_DIR_AfterWMB
@@ -1634,25 +1546,11 @@ rem ========================================
 goto :EOF
 
 
-rem ===============================================================================
-rem :IntServ_ReenableIfStopped: Reenable any integration servers that were
-rem previously stopped when this version of WTX was installed.
-rem ===============================================================================
+
 
 :IntServ_ReenableIfStopped
 
-rem ========================================
-rem If WMB is present, the profile will have
-rem already been defined and run.
-rem If WMB was previously stopped, setup the
-rem command to start it.
-rem
-rem that we're interested in.  Per George Blue
-rem of the WMB team, we should stop the DbInstMgr:
-rem last.  Other than this, the order should not
-rem matter.  Since we're stopping the DbInstMgr:
-rem last, we'll go with starting it first.
-rem ========================================
+
 
 if not defined WMB_PROFILE                           goto :IS_RIS_AfterWMB
 if /i (%INTSERV_STATUS_WMB%) neq (%STATUS_STOPPED%)  goto :IS_RIS_AfterWMB
@@ -2574,35 +2472,18 @@ if not defined GUILockFile  goto :UP_IS_AfterWaitForGUILockFile
 
 :UP_IS_WaitForInstall
 call :Log
-rem 03/12/2008: Update message to accomodate impatient people...
-rem call :Log %0: %date% %time%: Waiting for lockfile to be cleared...
+
 call :Log %0: %date% %time%: Please wait while the uninstall completes...
 
 :UP_IS_WaitForInstall_Loop
 if not exist %GUILockFile%   goto :UP_IS_AfterWaitForGUILockFile
-rem
-rem 02/22/2012: gbc: This section of code, taken from the Silent Install
-rem process, does not work with the IS2011 uninstalls due to the uninstall
-rem logfile getting created immediately with a ResultCode=0, even though
-rem the uninstall process has not completed (or was even close to it).
-rem That would cause us to prematurely delete our own lockfile.
-rem
-rem call :GetISRC
-rem if not defined UNINSTALL_RC  goto :UP_ISWait_AfterCheckResult
-rem del /f /q %GUILockFile%
-rem goto :UP_IS_WaitForInstall_Loop
-rem :UP_ISWait_AfterCheckResult
-rem
+
 %SLEEP_CMD% > nul 2>&1
 goto :UP_IS_WaitForInstall_Loop
 
 :UP_IS_AfterWaitForGUILockFile
 
-rem ========================================
-rem Wait for the "UninstallString" entry to
-rem be deleted from the registry, which
-rem should signify the uninstall completed.
-rem ========================================
+
 
 :UP_WaitForUninstall
 call :RegQueryKey
@@ -2625,22 +2506,6 @@ goto :UP_AfterLaunchUninstall
 :UP_IS_SetRCTo0
 set UNINSTALL_RC=0
 goto :UP_AfterLaunchUninstall
-
-rem ========================================
-rem Errors
-rem
-rem :UP_UninstallStringNotFound: For v8403,
-rem we need to check both the GUID and
-rem product name uninstall keys.  If we have
-rem only checked one of them, the env var
-rem UP_MOREUNINSTALLKEYSTOCHECK will be
-rem defined.  If it is, we need to jump back
-rem to the start of the script and check the
-rem alternate key location for the uninstall
-rem string.  For all other releases, we only
-rem need to check one key or the other, but
-rem not both.
-rem ========================================
 
 :UP_UninstallStringNotFound
 if defined UP_MOREUNINSTALLKEYSTOCHECK  goto :UP_UninstallLoop
@@ -2677,35 +2542,12 @@ if defined TXINSTALLS_DEBUG pause
 goto :EOF
 
 
-rem ===============================================================================
-rem :GetUninstallKey: Get the key that holds the UninstallString for the specified
-rem install.
-rem
-rem Starting with v8.4.0.3, the uninstall key changed from being the product name
-rem (defined by INSTNAME_*) to being the GUID.  The GUID can be determined by
-rem getting it from the InstanceInfo registry key that DaveR creates for each
-rem product below %MAJOR_VER_KEY% (for INSTALL_TYPE_IS2011_32BIT) or
-rem %MAJOR_VER_KEY_64% (for INSTALL_TYPE_IS2011_64BIT).  If InstanceInfo is
-rem present, use that value as the uninstall key.  Otherwise, default to our
-rem original behavior of using the product name as the uninstall key.
-rem 
-rem ===============================================================================
 
 :GetUninstallKey
 
 set UNINSTALL_KEY=
 set UNINSTALL_ESD_INSTNAME=
 
-rem ========================================
-rem v8.0: Install="DataStage TX"  UninstallKey="Ascential DataStage TX 8.0"
-rem v8.1: Install="TX with Command Server"  UninstallKey="IBM WebSphere Transformation Extender 8.1 Command Server"
-rem v8.2: Install="TX with Command Server"  UninstallKey="IBM WebSphere Transformation Extender 8.2 with Command Server"
-rem v8.4 IS55:   Install="TX with Command Server"  UninstallKey="IBM WebSphere Transformation Extender 8.4 with Command Server"
-rem v8.4 IS2011: Install="TX with Command Server"  UninstallKey="IBM WebSphere Transformation Extender 8.4 Command Server"
-rem v8.4.0.3.3: Install="TX with Command Server"
-rem - First check will return UninstallKey="<GUID_For_InstallBitType>"
-rem - Next check for will return UninstallKey="IBM WebSphere Transformation Extender 8.4 Command Server"
-rem ========================================
 
 set CURINSTALL=%INSTNAME_CMDSRVR%
 if /i (%1) neq ("%CURINSTALL%")  goto :GUK_AfterCmdSrvr
@@ -2729,9 +2571,7 @@ if not defined UNINSTALL_KEY   set UNINSTALL_KEY=%DEFAULT_UNINSTKEY_PREFIX% with
 goto :GUK_Done
 :GUK_AfterCmdSrvr
 
-rem ========================================
-rem v8.0: Install="DataStage TX for Japan"  UninstallKey="Ascential DataStage TX 8.0 for Japan"
-rem ========================================
+
 
 set CURINSTALL=%INSTNAME_CMDSRVR_INTL%
 if /i (%1) neq ("%CURINSTALL%")  goto :GUK_AfterCmdSrvrIntl
@@ -2740,9 +2580,7 @@ set UNINSTALL_KEY=%DEFAULT_UNINSTKEY_PREFIX% %INTL_SUFFIX%
 goto :GUK_Done
 :GUK_AfterCmdSrvrIntl
 
-rem ========================================
-rem Install="Design Studio"
-rem ========================================
+
 
 set CURINSTALL=%INSTNAME_DESSTUD%
 if /i (%1) neq ("%CURINSTALL%")  goto :GUK_AfterDesignStudio
@@ -2761,9 +2599,6 @@ set UNINSTALL_KEY=%DEFAULT_UNINSTKEY_PREFIX% %CURINSTALL%
 goto :GUK_Done
 :GUK_AfterDesignStudio
 
-rem ========================================
-rem v8.0: Install="Design Studio for Japan"
-rem ========================================
 
 set CURINSTALL=%INSTNAME_DESSTUD_INTL%
 if /i (%1) neq ("%CURINSTALL%")  goto :GUK_AfterDesignStudioIntl
@@ -2784,10 +2619,6 @@ set INSTALL_TYPE=%INSTALL_TYPE_IS63%
 goto :GUK_Done
 :GUK_AfterJCAGateway
 
-rem ========================================
-rem v8.0: Install="Online Library"  UninstallKey="{C4B4AD5E-0B53-46BD-941A-89C642796124}"
-rem !8.0: Install="Online Library"  UninstallKey="IBM WebSphere Transformation Extender <MAJOR_VER> Online Library"
-rem ========================================
 
 set CURINSTALL=%INSTNAME_LIBRARY%
 if /i (%1) neq ("%CURINSTALL%")  goto :GUK_AfterOnlineLibrary
@@ -2810,13 +2641,6 @@ goto :GUK_Done
 set UNINSTALL_KEY=%DEFAULT_UNINSTKEY_PREFIX% %CURINSTALL%
 goto :GUK_Done
 :GUK_AfterOnlineLibrary
-
-rem ========================================
-rem v8.0: Install="DataStage TX Extended Edition"  UninstallKey="Ascential DataStage TX 8.0 Extended Edition"
-rem v8.1: Install="TX with Launcher"  UninstallKey="IBM WebSphere Transformation Extender 8.1 Launcher"
-rem v8.2-8.4:    Install="TX with Launcher"  UninstallKey="IBM WebSphere Transformation Extender 8.2 with Launcher"
-rem v8.4 IS2011: Install="TX with Launcher"  UninstallKey="IBM WebSphere Transformation Extender 8.4 Launcher"
-rem ========================================
 
 set CURINSTALL=%INSTNAME_LNCHR%
 if /i (%1) neq ("%CURINSTALL%")  goto :GUK_AfterLauncher
@@ -3286,55 +3110,7 @@ for /f "tokens=1,2 delims== " %%i in ('type %TMPOUTFILE%') do set UNINSTALL_RC=%
 goto :EOF
 
 
-rem ===============================================================================
-rem :DisplayISRC: Log the InstallShield return code passed in.
-rem - Arg1: InstallShield return code to be logged
-rem
-rem From Flexera Software: Q102572: INFO: Setup.log File
-rem
-rem Products: DevStudio 9.x, InstallShield 10.5 Premier, InstallShield 10.5
-rem    Professional, InstallShield 11.5 Premier, InstallShield 11.5 Professional,
-rem    InstallShield 11 Premier, InstallShield 11 Professional, InstallShield X Premier,
-rem    InstallShield X Professional, Professional 5.x, Professional 7.x
-rem
-rem The Setup.log file contains three sections. The first section, [InstallShield
-rem Silent], identifies the version of InstallShield Silent used in the silent
-rem installation. It also identifies the file as a log file.
-rem
-rem The second section, [Application], identifies the installed application's name and
-rem version, and the company name.
-rem
-rem The third section, [ResponseResult], contains the result code indicating whether
-rem or not the silent installation succeeded. An integer value is assigned to the
-rem ResultCode key name in the [ResponseResult] section. InstallShield places one of
-rem the following return values after the ResultCode key name:
-rem
-rem       0  Success.
-rem      -1  General error.
-rem      -2  Invalid mode.
-rem      -3  Required data not found in the Setup.iss file.
-rem      -4  Not enough memory available.
-rem      -5  File does not exist.
-rem      -6  Cannot write to the response file.
-rem      -7  Unable to write to the log file.
-rem      -8  Invalid path to the InstallShield Silent response file.
-rem      -9  Not a valid list type (string or number).
-rem     -10  Data type is invalid.
-rem     -11  Unknown error during setup.
-rem     -12  Dialogs are out of order.
-rem     -51  Cannot create the specified folder.
-rem     -52  Cannot access the specified file or folder.
-rem     -53  Invalid option selected.
-rem    -105  Component tree entry specified in response file not found.
-rem
-rem The Setup.log file for a successful silent installation of InstallShield is shown
-rem below:
-rem
-rem     ...
-rem     [ResponseResult]
-rem     ResultCode=0
-rem
-rem ===============================================================================
+
 
 :DisplayISRC
 
@@ -3482,41 +3258,6 @@ call :Log %DIARC_RESULT%
 set DIARC_RESULT=
 goto :EOF
 
-
-rem ===============================================================================
-rem :CheckIfMachineIs64Bit: Is this platform 64bit?
-rem
-rem 2011/08/26: Old way of checking for 64bit processor
-rem
-rem     set SUBKEY_64BIT=Wow6432Node
-rem     set HKLM_BASE=HKLM\Software
-rem     set REG_QUERY_KEYNAME=%HKLM_BASE%\%SUBKEY_64BIT%
-rem     set REG_QUERY_VALUENAME=
-rem     call :RegQueryKey
-rem     if ("%REG_QUERY_RETCODE%") equ ("0") set MACHINE_IS_64BIT=1
-rem
-rem New way of checking for 64bit processor based on information found here:
-rem
-rem     http://blogs.msdn.com/b/david.wang/archive/2006/03/26/howto-detect-process-bitness.aspx
-rem     MSDN Blogs > David Wang > HOWTO: Detect Process Bitness 
-rem
-rem Detection Matrix
-rem
-rem The general idea is to check the following environment variables:
-rem
-rem * PROCESSOR_ARCHITECTURE - reports the native processor architecture
-rem                            EXCEPT for WOW64, where it reports x86.
-rem * PROCESSOR_ARCHITEW6432 - not used EXCEPT for WOW64, where it reports
-rem                            the original native processor architecture.
-rem
-rem Visually, it looks like:
-rem
-rem Environment Variable   \ Program Bitness   32bit Native   64bit Native   WOW64
-rem PROCESSOR_ARCHITECTURE                         x86           AMD64        x86
-rem PROCESSOR_ARCHITEW6432                      undefined      undefined     AMD64
-rem * WOW64 = 32bit Program on 64bit OS
-rem * Replace AMD64 with IA64 for Itaniums
-rem ===============================================================================
 
 :CheckIfMachineIs64Bit
 
